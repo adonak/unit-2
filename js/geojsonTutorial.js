@@ -1,4 +1,4 @@
-var map = L.map('map').setView([39.7392364, -104.984862], 5);
+var map = L.map('mapDenver').setView([39.7392364, -104.984862], 5);
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
