@@ -1,136 +1,71 @@
-function initialize(){
-  cities();
-  loadData();
-  debugAjax();
+// global map variable
+var mapWiscTemps;
+
+// function to instantiate Leaflet map object
+function createMap(){
+    //create map
+    mapWiscTemps = L.map('mapWiscTemps', {
+        center: [44.4308975, -89.6884637],
+        zoom: 7
+    });
+
+    //add base tilelayer
+    // uses Stadia AlidadeSmooth map
+    L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.{ext}', {
+	minZoom: 0,
+	maxZoom: 20,
+	attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	ext: 'png'
+	}).addTo(mapWiscTemps);
+
+    //call getData function
+    getData();
 };
 
-//function to create a table with cities and their populations
-function cities(){
-	//define arrays with cities and pop
-	var cityPop = [
-		{ 
-			city: 'Madison',
-			population: 233209
-		},
-		{
-			city: 'Milwaukee',
-			population: 594833
-		},
-		{
-			city: 'Green Bay',
-			population: 104057
-		},
-		{
-			city: 'Superior',
-			population: 27244
-		}
-	];
-
-	//create table element
-	var table = document.createElement("table");
-
-	//create header and append it to table
-	var headerRow = document.createElement("tr");
-	table.appendChild(headerRow);
-
-	//create headers for city and population
-	headerRow.insertAdjacentHTML("beforeend","<th>City</th><th>Population</th>")
-	
-	//add each city
-    cityPop.forEach(function(cityObject){
-		table.insertAdjacentHTML('beforeend',"<tr><td>" + cityObject.city + "</td><td>" + cityObject.population + "</td></tr>");
-	})
-	
-	//append the table element to the div
-	document.querySelector("#mydiv").appendChild(table);
-
-    addColumns(cityPop);
-    addEvents();
-
+//function to attach popups to each mapped feature
+function onEachFeature(feature, layer) {
+    //no property named popupContent; instead, create html string with all properties
+    var popupContent = "";
+    if (feature.properties) {
+        //loop to add feature property names and values to html string
+        for (var property in feature.properties){
+            if (property === 'NAME') {
+                popupContent += "<p>" + property + ": " + feature.properties[property] + "</p>";
+            }
+            if (property.includes('TAVG')) {  // limit table so it only includes the ave temp field
+				// format fields so they are more readable
+                popupContent += "<p>" + "Ave. Yearly Temp " + property.substring(property.length-4, property.length) + ": " + feature.properties[property] + " F" + "</p>";
+            }
+        }
+        layer.bindPopup(popupContent);
+    };
 };
 
-//function to add new column to table
-function addColumns(cityPop){
-    
-	//select all column rows
-	var rows = document.querySelectorAll("tr")
-	//loop to add new column to each row
-	document.querySelectorAll("tr").forEach(function(row,i){
-		//for first row in the table, add the column header
-		if (i == 0){
-    		//create new header, add to table
-			row.insertAdjacentHTML('beforeend', '<th>City Size</th>');
-    	} else {
-    		var citySize;
-
-    		if (cityPop[i-1].population < 100000){
-    			citySize = 'Small';
-    		} else if (cityPop[i-1].population < 500000){
-    			citySize = 'Medium';
-    		} else {
-    			citySize = 'Large';
-    		};
-
-			//add new table cell with the city size
-    		row.insertAdjacentHTML('beforeend','<td>' + citySize + '</td>');
-    	};
-	})
+//function to retrieve the data and place it on the map
+function getData(){
+    //load data
+    fetch("data/wiscTemps.geojson")
+        .then(function(response){
+            return response.json();
+        })
+        .then(function(json){
+            //create marker options
+            var geojsonMarkerOptions = {
+                radius: 10,
+                fillColor: "#ffa07a",  //light salmon color
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 1
+            };
+            //create a Leaflet GeoJSON layer and add it to the map
+            L.geoJson(json, {
+                pointToLayer: function (feature, latlng){
+                    return L.circleMarker(latlng, geojsonMarkerOptions);  // creates circle markers
+                },
+                onEachFeature: onEachFeature  // adds properties to pop-up
+            }).addTo(mapWiscTemps);
+        })  
 };
 
-//function adds random colors to table when mouse hovers over
-function addEvents(){
-	table = document.querySelector("table");
-	document.querySelector("table").addEventListener("mouseover", function(){
-		var color = "rgb(";
-		for (var i=0; i<3; i++){
-
-			var random = Math.round(Math.random() * 255);
-			color += random;
-
-			if (i<2){
-				color += ",";
-			} else {
-				color += ")";
-			};
-		}
-		//style table with the random style
-		table.style.color = color;
-	}); 
-
-	//function that shows an alert on click
-	function clickme(){
-		alert('Hey, you clicked me!');
-	};
-
-	//event listener for the click
-	table.addEventListener("click", clickme)
-};
-
-function loadData(){
-  var cities
-
-  fetch('data/MegaCities.geojson')
-    .then(function(response){
-        return response.json();
-    })
-    .then(function(request){
-      cities = response;
-      console.log(cities);
-    })
-}
-
-
-function debugCallback(myData){
-	document.querySelector("#mydiv").insertAdjacentHTML('beforeend',"GeoJSON data: " + JSON.stringify(myData));
-};
-
-function debugAjax(){
-	fetch("data/MegaCities.geojson")
-		.then(function(response){
-			return response.json();
-		})
-		.then(debugCallback)
-};
-
-//call the initialize function when the document has loaded
-document.addEventListener('DOMContentLoaded',initialize)
+document.addEventListener('DOMContentLoaded',createMap);
