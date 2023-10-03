@@ -1,9 +1,11 @@
-// global map variable
+//declare map variable globally so all functions have access
 var mapWiscTemps;
+var minValue;
 
-// function to instantiate Leaflet map object
+//create map
 function createMap(){
-    //create map
+
+    //create the map
     mapWiscTemps = L.map('mapWiscTemps', {
         center: [44.4308975, -89.6884637],
         zoom: 7
@@ -19,53 +21,93 @@ function createMap(){
 	}).addTo(mapWiscTemps);
 
     //call getData function
-    getData();
+    getData(mapWiscTemps);
 };
 
-//function to attach popups to each mapped feature
-function onEachFeature(feature, layer) {
-    //no property named popupContent; instead, create html string with all properties
-    var popupContent = "";
-    if (feature.properties) {
-        //loop to add feature property names and values to html string
-        for (var property in feature.properties){
-            if (property === 'NAME') {
-                popupContent += "<p>" + property + ": " + feature.properties[property] + "</p>";
-            }
-            if (property.includes('TAVG')) {  // limit table so it only includes the ave temp field
-				// format fields so they are more readable
-                popupContent += "<p>" + "Ave. Yearly Temp " + property.substring(property.length-4, property.length) + ": " + feature.properties[property] + " F" + "</p>";
-            }
+function calculateMinValue(data){
+    //create empty array to store all data values
+    var allValues = [];
+    //loop through each city
+    for(var NAME of data.features){
+        //loop through each year
+        for(var year = 2015; year <= 2023; year+=1){
+              //get population for current year
+              var value = NAME.properties["TAVG_"+ String(year)];
+              allValues.push(value)
         }
-        layer.bindPopup(popupContent);
-    };
+    }
+    //get minimum value of array
+    var minValue = Math.min(...allValues)
+
+    return minValue;
+}
+
+//calculate radius of each proportional symbol
+function calcPropRadius(attValue) {
+    //constant factor adjusts symbol sizes evenly
+    var minRadius = 5;
+    //Flannery Apperance Compensation formula
+    var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius
+
+    return radius;
 };
 
-//function to retrieve the data and place it on the map
+//function to convert markers to circle markers
+function pointToLayer(feature, latlng){
+    //Determine which attribute to visualize with proportional symbols
+    var attribute = "TAVG_2015";
+
+    //create marker options
+    var options = {
+        fillColor: "#ff7800",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    };
+
+    //For each feature, determine its value for the selected attribute
+    var attValue = Number(feature.properties[attribute]);
+
+    //Give each feature's circle marker a radius based on its attribute value
+    options.radius = calcPropRadius(attValue);
+
+    //create circle marker layer
+    var layer = L.circleMarker(latlng, options);
+
+    //build popup content string
+    var popupContent = "<p><b>City:</b> " + feature.properties.NAME + "</p><p><b>" + attribute + ":</b> " + feature.properties[attribute] + "</p>";
+
+    //bind the popup to the circle marker
+    layer.bindPopup(popupContent);
+
+    //return the circle marker to the L.geoJson pointToLayer option
+    return layer;
+};
+
+
+//Add circle markers for point features to the map
+function createPropSymbols(data){
+    //create a Leaflet GeoJSON layer and add it to the map
+    L.geoJson(data, {
+        pointToLayer: pointToLayer
+    }).addTo(mapWiscTemps);
+};
+
+
+//Import GeoJSON data
 function getData(){
-    //load data
+    //load the data
     fetch("data/wiscTemps.geojson")
         .then(function(response){
             return response.json();
         })
         .then(function(json){
-            //create marker options
-            var geojsonMarkerOptions = {
-                radius: 10,
-                fillColor: "#ffa07a",  //light salmon color
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 1
-            };
-            //create a Leaflet GeoJSON layer and add it to the map
-            L.geoJson(json, {
-                pointToLayer: function (feature, latlng){
-                    return L.circleMarker(latlng, geojsonMarkerOptions);  // creates circle markers
-                },
-                onEachFeature: onEachFeature  // adds properties to pop-up
-            }).addTo(mapWiscTemps);
-        })  
+            //calculate minimum data value
+            minValue = calculateMinValue(json);
+            //call function to create proportional symbols
+            createPropSymbols(json);
+        })
 };
 
-document.addEventListener('DOMContentLoaded',createMap);
+document.addEventListener('DOMContentLoaded',createMap)
