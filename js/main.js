@@ -76,7 +76,7 @@ function pointToLayer(feature, latlng, attributes){
     var layer = L.circleMarker(latlng, options);
 
     //build popup content string
-    var popupContent = "<p><b>Weather Station:</b> " + feature.properties.NAME + "</p><p><b>" + "Ave. Temp. " + attribute.slice(-4) + ":</b> " + feature.properties[attribute] + " F" + "</p>";
+    var popupContent = "<p><b>Weather Station:</b> " + feature.properties.NAME + "</p><p><b>" + "Ave Temp in " + attribute.slice(-4) + ":</b> " + feature.properties[attribute] + " F" + "</p>";
 
     //bind the popup to the circle marker
     layer.bindPopup(popupContent);
@@ -183,7 +183,7 @@ function updatePropSymbols(attribute){
 
             //add formatted attribute to panel content string
             var year = attribute.split("_")[1];
-            popupContent += "<p><b>Population in " + year + ":</b> " + props[attribute] + " million</p>";
+            popupContent += "<p><b>Ave Temp in " + year + ":</b> " + props[attribute] + " F</p>";
 
             //update popup content            
             popup = layer.getPopup();            
