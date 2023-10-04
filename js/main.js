@@ -30,9 +30,10 @@ function calculateMinValue(data){
     //loop through each city
     for(var NAME of data.features){
         //loop through each year
-        for(var year = 2015; year <= 2023; year+=1){
-              //get population for current year
+        for(var year = 2015; year <= 2021; year+=1){
+              //get temp for current year
               var value = NAME.properties["TAVG_"+ String(year)];
+              console.log(value)
               allValues.push(value)
         }
     }
@@ -45,9 +46,9 @@ function calculateMinValue(data){
 //calculate radius of each proportional symbol
 function calcPropRadius(attValue) {
     //constant factor adjusts symbol sizes evenly
-    var minRadius = 5;
+    var minRadius = 8;
     //Flannery Apperance Compensation formula
-    var radius = 1.0083 * Math.pow(attValue/minValue,0.5715) * minRadius
+    var radius = 1.0083 * Math.pow(Number(attValue)/minValue,0.5715) * Number(minRadius)
 
     return radius;
 };
@@ -76,7 +77,7 @@ function pointToLayer(feature, latlng){
     var layer = L.circleMarker(latlng, options);
 
     //build popup content string
-    var popupContent = "<p><b>City:</b> " + feature.properties.NAME + "</p><p><b>" + attribute + ":</b> " + feature.properties[attribute] + "</p>";
+    var popupContent = "<p><b>Weather Station:</b> " + feature.properties.NAME + "</p><p><b>" + "Ave. Temp. " + attribute.slice(-4) + ":</b> " + feature.properties[attribute] + "</p>";
 
     //bind the popup to the circle marker
     layer.bindPopup(popupContent);
